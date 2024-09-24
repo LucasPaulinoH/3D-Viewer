@@ -2,15 +2,15 @@
 <Project>
   <ProjectOutputs>
     <ProjectOutput>
-      <FullPath>C:\Users\lucas\OneDrive\Documentos\UFERSA\UFERSA 2024.1\Computação Gráfica\Unidade II\TP2\x64\Debug\Multi.exe</FullPath>
+      <FullPath>C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\x64\Debug\Multi.exe</FullPath>
     </ProjectOutput>
   </ProjectOutputs>
   <ContentFiles>
     <ContentFile>
-      <FullPath>C:\Users\lucas\OneDrive\Documentos\UFERSA\UFERSA 2024.1\Computação Gráfica\Unidade II\TP2\Multi\Shaders\Pixel.cso</FullPath>
+      <FullPath>C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Shaders\Pixel.cso</FullPath>
     </ContentFile>
     <ContentFile>
-      <FullPath>C:\Users\lucas\OneDrive\Documentos\UFERSA\UFERSA 2024.1\Computação Gráfica\Unidade II\TP2\Multi\Shaders\Vertex.cso</FullPath>
+      <FullPath>C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Shaders\Vertex.cso</FullPath>
     </ContentFile>
   </ContentFiles>
   <SatelliteDlls />

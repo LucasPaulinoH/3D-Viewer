@@ -19,7 +19,13 @@ private:
     XMFLOAT4X4 Identity = {};
     XMFLOAT4X4 View = {};
     XMFLOAT4X4 PerspectiveProjection = {};
-    XMFLOAT4X4 OrthographicProjection = {};
+
+    vector<D3D12_VIEWPORT> viewports;
+
+    D3D12_VIEWPORT topLeftVP;
+    D3D12_VIEWPORT topRightVP;
+    D3D12_VIEWPORT bottomLeftVP;
+    D3D12_VIEWPORT bottomRightVP;
 
     float theta = 0;
     float phi = 0;
@@ -56,10 +62,8 @@ void Multi::Init()
 
     XMStoreFloat4x4(&PerspectiveProjection, XMMatrixPerspectiveFovLH(
         XMConvertToRadians(45.0f), 
-        1.0f, 
+        1.0f,
         1.0f, 100.0f));
-
-    XMStoreFloat4x4(&OrthographicProjection, XMMatrixOrthographicLH(10, 10, 1.0f, 100.0f));
 
     Box box(2.0f, 2.0f, 2.0f);
     Cylinder cylinder(1.0f, 0.5f, 3.0f, 20, 20);
@@ -116,6 +120,39 @@ void Multi::Init()
     gridObj.submesh.indexCount = grid.IndexCount();
     scene.push_back(gridObj);
  
+    topLeftVP.TopLeftX = 0.0f;
+    topLeftVP.TopLeftY = 0.0f;
+    topLeftVP.Width = float(window->Width() / 2);
+    topLeftVP.Height = float(window->Height() / 2);
+    topLeftVP.MinDepth = 0.0f;
+    topLeftVP.MaxDepth = 1.0f;
+
+    topRightVP.TopLeftX = float(window->Width() / 2);
+    topRightVP.TopLeftY = 0.0f;
+    topRightVP.Width = float(window->Width() / 2);
+    topRightVP.Height = float(window->Height() / 2);
+    topRightVP.MinDepth = 0.0f;
+    topRightVP.MaxDepth = 1.0f;
+
+    bottomLeftVP.TopLeftX = 0.0f;
+    bottomLeftVP.TopLeftY = float(window->Height() / 2);
+    bottomLeftVP.Width = float(window->Width() / 2);
+    bottomLeftVP.Height = float(window->Height() / 2);
+    bottomLeftVP.MinDepth = 0.0f;
+    bottomLeftVP.MaxDepth = 1.0f;
+
+    bottomRightVP.TopLeftX = float(window->Width() / 2);
+    bottomRightVP.TopLeftY = float(window->Height() / 2);
+    bottomRightVP.Width = float(window->Width() / 2);
+    bottomRightVP.Height = float(window->Height() / 2);
+    bottomRightVP.MinDepth = 0.0f;
+    bottomRightVP.MaxDepth = 1.0f;
+
+    viewports.push_back(topLeftVP);
+    viewports.push_back(topRightVP);
+    viewports.push_back(bottomLeftVP);
+    viewports.push_back(bottomRightVP);
+
     BuildRootSignature();
     BuildPipelineState();    
 
@@ -164,18 +201,15 @@ void Multi::Update()
     XMStoreFloat4x4(&View, view);
 
     XMMATRIX perspectiveProjectionMatrix = XMLoadFloat4x4(&PerspectiveProjection);
-    XMMATRIX orthographicProjectionMatrix = XMLoadFloat4x4(&OrthographicProjection);
 
     for (auto & obj : scene)
     {
         XMMATRIX world = XMLoadFloat4x4(&obj.world);      
 
         XMMATRIX WorldViewProjPerspective = world * view * perspectiveProjectionMatrix; 
-        XMMATRIX WorldViewProjOrthographic = world * view * orthographicProjectionMatrix;
 
         ObjectConstants constants;
         XMStoreFloat4x4(&constants.WorldViewProj, XMMatrixTranspose(WorldViewProjPerspective));
-        XMStoreFloat4x4(&constants.WorldViewProj, XMMatrixTranspose(WorldViewProjOrthographic));
 
         obj.mesh->CopyConstants(&constants);
     }
@@ -185,22 +219,25 @@ void Multi::Draw()
 {
     graphics->Clear(pipelineState);
     
-    for (auto& obj : scene)
-    {
-        ID3D12DescriptorHeap* descriptorHeap = obj.mesh->ConstantBufferHeap();
-        graphics->CommandList()->SetDescriptorHeaps(1, &descriptorHeap);
-        graphics->CommandList()->SetGraphicsRootSignature(rootSignature);
-        graphics->CommandList()->IASetVertexBuffers(0, 1, obj.mesh->VertexBufferView());
-        graphics->CommandList()->IASetIndexBuffer(obj.mesh->IndexBufferView());
-        graphics->CommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    for (uint i = 0; i < viewports.size(); i++) {
+        graphics->CommandList()->RSSetViewports(1, &viewports.at(i));
 
-        graphics->CommandList()->SetGraphicsRootDescriptorTable(0, obj.mesh->ConstantBufferHandle(0));
+        for (auto& obj : scene)
+        {
+            ID3D12DescriptorHeap* descriptorHeap = obj.mesh->ConstantBufferHeap();
+            graphics->CommandList()->SetDescriptorHeaps(1, &descriptorHeap);
+            graphics->CommandList()->SetGraphicsRootSignature(rootSignature);
+            graphics->CommandList()->IASetVertexBuffers(0, 1, obj.mesh->VertexBufferView());
+            graphics->CommandList()->IASetIndexBuffer(obj.mesh->IndexBufferView());
+            graphics->CommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-        graphics->CommandList()->DrawIndexedInstanced(
-            obj.submesh.indexCount, 1,
-            obj.submesh.startIndex,
-            obj.submesh.baseVertex,
-            0);
+            graphics->CommandList()->SetGraphicsRootDescriptorTable(0, obj.mesh->ConstantBufferHandle(0));
+            graphics->CommandList()->DrawIndexedInstanced(
+                obj.submesh.indexCount, 1,
+                obj.submesh.startIndex,
+                obj.submesh.baseVertex,
+                0);
+        }
     }
 
     graphics->Present();    

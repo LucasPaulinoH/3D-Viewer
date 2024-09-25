@@ -49,6 +49,7 @@
       <Filter>DXUT\Arquivos de Origem</Filter>
     </ClCompile>
     <ClCompile Include="Multi.cpp" />
+    <ClCompile Include="ViewportsInitializer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h">
@@ -90,6 +91,7 @@
     <ClInclude Include="Object.h">
       <Filter>DXUT\Arquivos de Cabeçalho</Filter>
     </ClInclude>
+    <ClInclude Include="ViewportsInitializer.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Pixel.hlsl">

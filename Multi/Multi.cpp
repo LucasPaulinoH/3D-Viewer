@@ -1,4 +1,5 @@
 #include "DXUT.h"
+#include "ViewportsInitializer.h"
 
 struct ObjectConstants
 {
@@ -22,11 +23,6 @@ private:
 
     vector<D3D12_VIEWPORT> viewports;
 
-    D3D12_VIEWPORT topLeftVP;
-    D3D12_VIEWPORT topRightVP;
-    D3D12_VIEWPORT bottomLeftVP;
-    D3D12_VIEWPORT bottomRightVP;
-
     float theta = 0;
     float phi = 0;
     float radius = 0;
@@ -38,6 +34,8 @@ public:
     void Update();
     void Draw();
     void Finalize();
+
+    Object generateObjectFromGeometry(Geometry geometry, XMMATRIX scaleMatrix, XMMATRIX translationMatrix);
 
     void BuildRootSignature();
     void BuildPipelineState();
@@ -71,87 +69,20 @@ void Multi::Init()
     Grid grid(3.0f, 3.0f, 20, 20);
 
     for (auto& v : box.vertices) v.color = XMFLOAT4(DirectX::Colors::Orange);
-    for (auto& v : cylinder.vertices) v.color = XMFLOAT4(DirectX::Colors::Yellow);
-    for (auto& v : sphere.vertices) v.color = XMFLOAT4(DirectX::Colors::Crimson);
+    for (auto& v : cylinder.vertices) v.color = XMFLOAT4(DirectX::Colors::Orange);
+    for (auto& v : sphere.vertices) v.color = XMFLOAT4(DirectX::Colors::Orange);
     for (auto& v : grid.vertices) v.color = XMFLOAT4(DirectX::Colors::DimGray);
 
-    Object boxObj;
-    XMStoreFloat4x4(&boxObj.world,
-        XMMatrixScaling(0.4f, 0.4f, 0.4f) *
-        XMMatrixTranslation(-1.0f, 0.41f, 1.0f));
+    scene.push_back(generateObjectFromGeometry(box, XMMatrixScaling(0.4f, 0.4f, 0.4f), XMMatrixTranslation(-1.0f, 0.41f, 1.0f)));
+    scene.push_back(generateObjectFromGeometry(cylinder, XMMatrixScaling(0.5f, 0.5f, 0.5f), XMMatrixTranslation(1.0f, 0.75f, -1.0f)));
+    scene.push_back(generateObjectFromGeometry(sphere, XMMatrixScaling(0.5f, 0.5f, 0.5f), XMMatrixTranslation(0.0f, 0.5f, 0.0f)));
 
-    boxObj.mesh = new Mesh();
-    boxObj.mesh->VertexBuffer(box.VertexData(), box.VertexCount() * sizeof(Vertex), sizeof(Vertex));
-    boxObj.mesh->IndexBuffer(box.IndexData(), box.IndexCount() * sizeof(uint), DXGI_FORMAT_R32_UINT);
-    boxObj.mesh->ConstantBuffer(sizeof(ObjectConstants));
-    boxObj.submesh.indexCount = box.IndexCount();
-    scene.push_back(boxObj);
-
-    Object cylinderObj;
-    XMStoreFloat4x4(&cylinderObj.world,
-        XMMatrixScaling(0.5f, 0.5f, 0.5f) *
-        XMMatrixTranslation(1.0f, 0.75f, -1.0f));
-
-    cylinderObj.mesh = new Mesh();
-    cylinderObj.mesh->VertexBuffer(cylinder.VertexData(), cylinder.VertexCount() * sizeof(Vertex), sizeof(Vertex));
-    cylinderObj.mesh->IndexBuffer(cylinder.IndexData(), cylinder.IndexCount() * sizeof(uint), DXGI_FORMAT_R32_UINT);
-    cylinderObj.mesh->ConstantBuffer(sizeof(ObjectConstants));
-    cylinderObj.submesh.indexCount = cylinder.IndexCount();
-    scene.push_back(cylinderObj);
-
-    Object sphereObj;
-    XMStoreFloat4x4(&sphereObj.world,
-        XMMatrixScaling(0.5f, 0.5f, 0.5f) *
-        XMMatrixTranslation(0.0f, 0.5f, 0.0f));
-
-    sphereObj.mesh = new Mesh();
-    sphereObj.mesh->VertexBuffer(sphere.VertexData(), sphere.VertexCount() * sizeof(Vertex), sizeof(Vertex));
-    sphereObj.mesh->IndexBuffer(sphere.IndexData(), sphere.IndexCount() * sizeof(uint), DXGI_FORMAT_R32_UINT);
-    sphereObj.mesh->ConstantBuffer(sizeof(ObjectConstants));
-    sphereObj.submesh.indexCount = sphere.IndexCount();
-    scene.push_back(sphereObj);
-
-    Object gridObj;
-    gridObj.mesh = new Mesh();
+    Object gridObj = generateObjectFromGeometry(grid, XMMatrixScaling(1.0f, 1.0f, 1.0f), XMMatrixTranslation(1.0f, 1.0f, 1.0f));
     gridObj.world = Identity;
-    gridObj.mesh->VertexBuffer(grid.VertexData(), grid.VertexCount() * sizeof(Vertex), sizeof(Vertex));
-    gridObj.mesh->IndexBuffer(grid.IndexData(), grid.IndexCount() * sizeof(uint), DXGI_FORMAT_R32_UINT);
-    gridObj.mesh->ConstantBuffer(sizeof(ObjectConstants));
-    gridObj.submesh.indexCount = grid.IndexCount();
+
     scene.push_back(gridObj);
  
-    topLeftVP.TopLeftX = 0.0f;
-    topLeftVP.TopLeftY = 0.0f;
-    topLeftVP.Width = float(window->Width() / 2);
-    topLeftVP.Height = float(window->Height() / 2);
-    topLeftVP.MinDepth = 0.0f;
-    topLeftVP.MaxDepth = 1.0f;
-
-    topRightVP.TopLeftX = float(window->Width() / 2);
-    topRightVP.TopLeftY = 0.0f;
-    topRightVP.Width = float(window->Width() / 2);
-    topRightVP.Height = float(window->Height() / 2);
-    topRightVP.MinDepth = 0.0f;
-    topRightVP.MaxDepth = 1.0f;
-
-    bottomLeftVP.TopLeftX = 0.0f;
-    bottomLeftVP.TopLeftY = float(window->Height() / 2);
-    bottomLeftVP.Width = float(window->Width() / 2);
-    bottomLeftVP.Height = float(window->Height() / 2);
-    bottomLeftVP.MinDepth = 0.0f;
-    bottomLeftVP.MaxDepth = 1.0f;
-
-    bottomRightVP.TopLeftX = float(window->Width() / 2);
-    bottomRightVP.TopLeftY = float(window->Height() / 2);
-    bottomRightVP.Width = float(window->Width() / 2);
-    bottomRightVP.Height = float(window->Height() / 2);
-    bottomRightVP.MinDepth = 0.0f;
-    bottomRightVP.MaxDepth = 1.0f;
-
-    viewports.push_back(topLeftVP);
-    viewports.push_back(topRightVP);
-    viewports.push_back(bottomLeftVP);
-    viewports.push_back(bottomRightVP);
+    viewports = initializeViewports(window);
 
     BuildRootSignature();
     BuildPipelineState();    
@@ -250,6 +181,20 @@ void Multi::Finalize()
 
     for (auto& obj : scene)
         delete obj.mesh;
+}
+
+
+Object Multi::generateObjectFromGeometry(Geometry geometry, XMMATRIX scaleMatrix, XMMATRIX translationMatrix) {
+    Object object;
+    XMStoreFloat4x4(&object.world, scaleMatrix * translationMatrix);
+
+    object.mesh = new Mesh();
+    object.mesh->VertexBuffer(geometry.VertexData(), geometry.VertexCount() * sizeof(Vertex), sizeof(Vertex));
+    object.mesh->IndexBuffer(geometry.IndexData(), geometry.IndexCount() * sizeof(uint), DXGI_FORMAT_R32_UINT);
+    object.mesh->ConstantBuffer(sizeof(ObjectConstants));
+    object.submesh.indexCount = geometry.IndexCount();
+    
+    return object;
 }
 
 

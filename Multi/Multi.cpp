@@ -29,6 +29,8 @@ private:
     float lastMousePosX = 0;
     float lastMousePosY = 0;
 
+    bool showPerspectiveOnly = true;
+
 public:
     void Init();
     void Update();
@@ -60,7 +62,7 @@ void Multi::Init()
 
     XMStoreFloat4x4(&PerspectiveProjection, XMMatrixPerspectiveFovLH(
         XMConvertToRadians(45.0f), 
-        1.0f,
+        window->AspectRatio(),
         1.0f, 100.0f));
 
     Box box(2.0f, 2.0f, 2.0f);
@@ -71,6 +73,7 @@ void Multi::Init()
     for (auto& v : box.vertices) v.color = XMFLOAT4(DirectX::Colors::Orange);
     for (auto& v : cylinder.vertices) v.color = XMFLOAT4(DirectX::Colors::Orange);
     for (auto& v : sphere.vertices) v.color = XMFLOAT4(DirectX::Colors::Orange);
+
     for (auto& v : grid.vertices) v.color = XMFLOAT4(DirectX::Colors::DimGray);
 
     scene.push_back(generateObjectFromGeometry(box, XMMatrixScaling(0.4f, 0.4f, 0.4f), XMMatrixTranslation(-1.0f, 0.41f, 1.0f)));
@@ -79,7 +82,6 @@ void Multi::Init()
 
     Object gridObj = generateObjectFromGeometry(grid, XMMatrixScaling(1.0f, 1.0f, 1.0f), XMMatrixTranslation(1.0f, 1.0f, 1.0f));
     gridObj.world = Identity;
-
     scene.push_back(gridObj);
  
     viewports = initializeViewports(window);
@@ -94,6 +96,9 @@ void Multi::Update()
 {
     if (input->KeyPress(VK_ESCAPE))
         window->Close();
+
+    if (input->KeyPress('V'))
+        showPerspectiveOnly = !showPerspectiveOnly;
 
     float mousePosX = (float)input->MouseX();
     float mousePosY = (float)input->MouseY();
@@ -133,16 +138,20 @@ void Multi::Update()
 
     XMMATRIX perspectiveProjectionMatrix = XMLoadFloat4x4(&PerspectiveProjection);
 
-    for (auto & obj : scene)
-    {
-        XMMATRIX world = XMLoadFloat4x4(&obj.world);      
+    for (uint i = 0; i < viewports.size(); i++) {
+        if (i < 2) continue;
 
-        XMMATRIX WorldViewProjPerspective = world * view * perspectiveProjectionMatrix; 
+        for (auto& obj : scene)
+        {
+            XMMATRIX world = XMLoadFloat4x4(&obj.world);
 
-        ObjectConstants constants;
-        XMStoreFloat4x4(&constants.WorldViewProj, XMMatrixTranspose(WorldViewProjPerspective));
+            XMMATRIX WorldViewProjPerspective = world * view * perspectiveProjectionMatrix;
 
-        obj.mesh->CopyConstants(&constants);
+            ObjectConstants constants;
+            XMStoreFloat4x4(&constants.WorldViewProj, XMMatrixTranspose(WorldViewProjPerspective));
+
+            obj.mesh->CopyConstants(&constants);
+        }
     }
 }
 
@@ -151,6 +160,8 @@ void Multi::Draw()
     graphics->Clear(pipelineState);
     
     for (uint i = 0; i < viewports.size(); i++) {
+        if (!showPerspectiveOnly && i == 0) continue;
+
         graphics->CommandList()->RSSetViewports(1, &viewports.at(i));
 
         for (auto& obj : scene)
@@ -169,6 +180,8 @@ void Multi::Draw()
                 obj.submesh.baseVertex,
                 0);
         }
+
+        if (showPerspectiveOnly && i == 0) break;
     }
 
     graphics->Present();    

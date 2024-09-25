@@ -3,10 +3,18 @@
 vector<D3D12_VIEWPORT> initializeViewports(Window* window) {
 	vector<D3D12_VIEWPORT> viewports;
 
+    D3D12_VIEWPORT fullPerspectiveVP;
     D3D12_VIEWPORT topLeftVP;
     D3D12_VIEWPORT topRightVP;
     D3D12_VIEWPORT bottomLeftVP;
     D3D12_VIEWPORT bottomRightVP;
+
+    fullPerspectiveVP.TopLeftX = 0.0f;
+    fullPerspectiveVP.TopLeftY = 0.0f;
+    fullPerspectiveVP.Width = float(window->Width());
+    fullPerspectiveVP.Height = float(window->Height());
+    fullPerspectiveVP.MinDepth = 0.0f;
+    fullPerspectiveVP.MaxDepth = 1.0f;
 
     topLeftVP.TopLeftX = 0.0f;
     topLeftVP.TopLeftY = 0.0f;
@@ -34,8 +42,9 @@ vector<D3D12_VIEWPORT> initializeViewports(Window* window) {
     bottomRightVP.Width = float(window->Width() / 2);
     bottomRightVP.Height = float(window->Height() / 2);
     bottomRightVP.MinDepth = 0.0f;
-    bottomRightVP.MaxDepth = 1.0f;
+    bottomRightVP.MaxDepth = 1.0f;    
 
+    viewports.push_back(fullPerspectiveVP);
     viewports.push_back(topLeftVP);
     viewports.push_back(topRightVP);
     viewports.push_back(bottomLeftVP);

@@ -13,15 +13,22 @@ struct ObjectConstants
 class Multi : public App
 {
 private:
+    vector<D3D12_VIEWPORT> viewports;
     ID3D12RootSignature* rootSignature = nullptr;
     ID3D12PipelineState* pipelineState = nullptr;
     vector<Object> scene;
 
     XMFLOAT4X4 Identity = {};
-    XMFLOAT4X4 View = {};
-    XMFLOAT4X4 PerspectiveProjection = {};
 
-    vector<D3D12_VIEWPORT> viewports;
+    XMFLOAT4X4 TLView = {};
+    XMFLOAT4X4 TRView = {};
+    XMFLOAT4X4 BLView = {};
+    XMFLOAT4X4 BRView = {};
+
+    XMFLOAT4X4 PerspectiveProj = {};
+    XMFLOAT4X4 OrthographicProj = {};
+
+    bool showPerspectiveOnly = true;
 
     float theta = 0;
     float phi = 0;
@@ -29,15 +36,13 @@ private:
     float lastMousePosX = 0;
     float lastMousePosY = 0;
 
-    bool showPerspectiveOnly = true;
-
 public:
     void Init();
     void Update();
     void Draw();
     void Finalize();
 
-    Object generateObjectFromGeometry(Geometry geometry, XMMATRIX scaleMatrix, XMMATRIX translationMatrix);
+    XMMATRIX generateObjectViewMatrix(float x, float y, float z);
 
     void BuildRootSignature();
     void BuildPipelineState();
@@ -47,49 +52,48 @@ void Multi::Init()
 {
     graphics->ResetCommands();
 
+    viewports = initViewports(window);
+
     theta = XM_PIDIV4;
     phi = 1.3f;
     radius = 5.0f;
 
-    lastMousePosX = (float) input->MouseX();
-    lastMousePosY = (float) input->MouseY();
+    lastMousePosX = (float)input->MouseX();
+    lastMousePosY = (float)input->MouseY();
 
-    Identity = View = {
+    Identity = TLView = {
         1.0f, 0.0f, 0.0f, 0.0f,
         0.0f, 1.0f, 0.0f, 0.0f,
         0.0f, 0.0f, 1.0f, 0.0f,
         0.0f, 0.0f, 0.0f, 1.0f };
 
-    XMStoreFloat4x4(&PerspectiveProjection, XMMatrixPerspectiveFovLH(
-        XMConvertToRadians(45.0f), 
+    XMStoreFloat4x4(&PerspectiveProj, XMMatrixPerspectiveFovLH(
+        XMConvertToRadians(45.0f),
         window->AspectRatio(),
         1.0f, 100.0f));
+    XMStoreFloat4x4(&OrthographicProj, XMMatrixOrthographicLH(
+        10, 7, 1.0f, 100.0f
+    ));
 
     Box box(2.0f, 2.0f, 2.0f);
-    Cylinder cylinder(1.0f, 0.5f, 3.0f, 20, 20);
-    Sphere sphere(1.0f, 20, 20);
-    Grid grid(3.0f, 3.0f, 20, 20);
-
     for (auto& v : box.vertices) v.color = XMFLOAT4(DirectX::Colors::Orange);
-    for (auto& v : cylinder.vertices) v.color = XMFLOAT4(DirectX::Colors::Orange);
-    for (auto& v : sphere.vertices) v.color = XMFLOAT4(DirectX::Colors::Orange);
 
-    for (auto& v : grid.vertices) v.color = XMFLOAT4(DirectX::Colors::DimGray);
+    Object boxObj;
+    XMStoreFloat4x4(&boxObj.world,
+        XMMatrixScaling(0.4f, 0.4f, 0.4f) *
+        XMMatrixTranslation(-1.0f, 0.41f, 1.0f));
 
-    scene.push_back(generateObjectFromGeometry(box, XMMatrixScaling(0.4f, 0.4f, 0.4f), XMMatrixTranslation(-1.0f, 0.41f, 1.0f)));
-    scene.push_back(generateObjectFromGeometry(cylinder, XMMatrixScaling(0.5f, 0.5f, 0.5f), XMMatrixTranslation(1.0f, 0.75f, -1.0f)));
-    scene.push_back(generateObjectFromGeometry(sphere, XMMatrixScaling(0.5f, 0.5f, 0.5f), XMMatrixTranslation(0.0f, 0.5f, 0.0f)));
-
-    Object gridObj = generateObjectFromGeometry(grid, XMMatrixScaling(1.0f, 1.0f, 1.0f), XMMatrixTranslation(1.0f, 1.0f, 1.0f));
-    gridObj.world = Identity;
-    scene.push_back(gridObj);
- 
-    viewports = initializeViewports(window);
+    boxObj.mesh = new Mesh();
+    boxObj.mesh->VertexBuffer(box.VertexData(), box.VertexCount() * sizeof(Vertex), sizeof(Vertex));
+    boxObj.mesh->IndexBuffer(box.IndexData(), box.IndexCount() * sizeof(uint), DXGI_FORMAT_R32_UINT);
+    boxObj.mesh->ConstantBuffer(sizeof(ObjectConstants));
+    boxObj.submesh.indexCount = box.IndexCount();
+    scene.push_back(boxObj);
 
     BuildRootSignature();
-    BuildPipelineState();    
+    BuildPipelineState();
 
-    graphics->SubmitCommands();
+   graphics->SubmitCommands();
 }
 
 void Multi::Update()
@@ -130,27 +134,50 @@ void Multi::Update()
     float z = radius * sinf(phi) * sinf(theta);
     float y = radius * cosf(phi);
 
-    XMVECTOR pos = XMVectorSet(x, y, z, 1.0f);
-    XMVECTOR target = XMVectorZero();
-    XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-    XMMATRIX view = XMMatrixLookAtLH(pos, target, up);
-    XMStoreFloat4x4(&View, view);
+    XMMATRIX tlView = generateObjectViewMatrix(x, y, z);
+    XMStoreFloat4x4(&TLView, tlView);
 
-    XMMATRIX perspectiveProjectionMatrix = XMLoadFloat4x4(&PerspectiveProjection);
+    XMMATRIX trView = generateObjectViewMatrix(0.0f, 10.0f, 0.01f);
+    XMStoreFloat4x4(&TRView, trView);
+
+    XMMATRIX blView = generateObjectViewMatrix(10.0f, 0.01f, 0.0f);
+    XMStoreFloat4x4(&BLView, blView);
+
+    XMMATRIX brView = generateObjectViewMatrix(0.0f, 0.01f, 10.0f);
+    XMStoreFloat4x4(&BRView, brView);
+
+    XMMATRIX perspectiveProj = XMLoadFloat4x4(&PerspectiveProj);
+    XMMATRIX orthographicProj = XMLoadFloat4x4(&OrthographicProj);
 
     for (uint i = 0; i < viewports.size(); i++) {
-        if (i < 2) continue;
-
-        for (auto& obj : scene)
+        for (auto& iterableObject : scene)
         {
-            XMMATRIX world = XMLoadFloat4x4(&obj.world);
+            XMMATRIX objectWorld = XMLoadFloat4x4(&iterableObject.world);
 
-            XMMATRIX WorldViewProjPerspective = world * view * perspectiveProjectionMatrix;
-
+            XMMATRIX WorldViewProj;
             ObjectConstants constants;
-            XMStoreFloat4x4(&constants.WorldViewProj, XMMatrixTranspose(WorldViewProjPerspective));
 
-            obj.mesh->CopyConstants(&constants);
+            switch (i)
+            {
+            case 0:
+                WorldViewProj = objectWorld * tlView * perspectiveProj;
+                break;
+            case 1:
+                WorldViewProj = objectWorld * tlView * perspectiveProj;
+                break;
+            case 2:
+                WorldViewProj = objectWorld * trView * orthographicProj;
+                break;
+            case 3:
+                WorldViewProj = objectWorld * blView * orthographicProj;
+                break;
+            case 4:
+                WorldViewProj = objectWorld * brView * orthographicProj;
+                break;
+            }     
+
+            XMStoreFloat4x4(&constants.WorldViewProj, XMMatrixTranspose(WorldViewProj));
+            iterableObject.mesh->CopyConstants(&constants, 0);
         }
     }
 }
@@ -158,11 +185,11 @@ void Multi::Update()
 void Multi::Draw()
 {
     graphics->Clear(pipelineState);
-    
+
     for (uint i = 0; i < viewports.size(); i++) {
         if (!showPerspectiveOnly && i == 0) continue;
 
-        graphics->CommandList()->RSSetViewports(1, &viewports.at(i));
+        graphics->CommandList()->RSSetViewports(1, &viewports[i]);
 
         for (auto& obj : scene)
         {
@@ -174,6 +201,7 @@ void Multi::Draw()
             graphics->CommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
             graphics->CommandList()->SetGraphicsRootDescriptorTable(0, obj.mesh->ConstantBufferHandle(0));
+
             graphics->CommandList()->DrawIndexedInstanced(
                 obj.submesh.indexCount, 1,
                 obj.submesh.startIndex,
@@ -184,7 +212,7 @@ void Multi::Draw()
         if (showPerspectiveOnly && i == 0) break;
     }
 
-    graphics->Present();    
+    graphics->Present();
 }
 
 void Multi::Finalize()
@@ -196,20 +224,13 @@ void Multi::Finalize()
         delete obj.mesh;
 }
 
+XMMATRIX Multi::generateObjectViewMatrix(float x, float y, float z) {
+    XMVECTOR pos = XMVectorSet(x, y, z, 1.0f);
+    XMVECTOR target = XMVectorZero();
+    XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
-Object Multi::generateObjectFromGeometry(Geometry geometry, XMMATRIX scaleMatrix, XMMATRIX translationMatrix) {
-    Object object;
-    XMStoreFloat4x4(&object.world, scaleMatrix * translationMatrix);
-
-    object.mesh = new Mesh();
-    object.mesh->VertexBuffer(geometry.VertexData(), geometry.VertexCount() * sizeof(Vertex), sizeof(Vertex));
-    object.mesh->IndexBuffer(geometry.IndexData(), geometry.IndexCount() * sizeof(uint), DXGI_FORMAT_R32_UINT);
-    object.mesh->ConstantBuffer(sizeof(ObjectConstants));
-    object.submesh.indexCount = geometry.IndexCount();
-    
-    return object;
+    return XMMatrixLookAtLH(pos, target, up);
 }
-
 
 void Multi::BuildRootSignature()
 {
@@ -255,7 +276,7 @@ void Multi::BuildRootSignature()
 }
 
 void Multi::BuildPipelineState()
-{    
+{
     D3D12_INPUT_ELEMENT_DESC inputLayout[2] =
     {
         { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
@@ -267,7 +288,6 @@ void Multi::BuildPipelineState()
 
     D3DReadFileToBlob(L"Shaders/Vertex.cso", &vertexShader);
     D3DReadFileToBlob(L"Shaders/Pixel.cso", &pixelShader);
-
 
     D3D12_RASTERIZER_DESC rasterizer = {};
     //rasterizer.FillMode = D3D12_FILL_MODE_SOLID;
@@ -351,7 +371,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         engine->Start(new Multi());
         delete engine;
     }
-    catch (Error & e)
+    catch (Error& e)
     {
         MessageBox(nullptr, e.ToString().data(), "Multi", MB_OK);
     }

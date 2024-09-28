@@ -3,6 +3,6 @@
 
 #include "DXUT.h"
 
-vector<D3D12_VIEWPORT> initializeViewports(Window * window);
+vector<D3D12_VIEWPORT> initViewports(Window * window);
 
 #endif

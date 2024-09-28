@@ -1,6 +1,6 @@
 #include "ViewportsInitializer.h"
 
-vector<D3D12_VIEWPORT> initializeViewports(Window* window) {
+vector<D3D12_VIEWPORT> initViewports(Window* window) {
 	vector<D3D12_VIEWPORT> viewports;
 
     D3D12_VIEWPORT fullPerspectiveVP;

@@ -18,6 +18,8 @@ private:
     ID3D12PipelineState* pipelineState = nullptr;
     vector<Object> scene;
 
+    Mesh* mesh = nullptr;
+
     XMFLOAT4X4 Identity = {};
 
     XMFLOAT4X4 TLView = {};
@@ -75,20 +77,63 @@ void Multi::Init()
         10, 7, 1.0f, 100.0f
     ));
 
+    // ==========================================================
+
     Box box(2.0f, 2.0f, 2.0f);
-    for (auto& v : box.vertices) v.color = XMFLOAT4(DirectX::Colors::Orange);
 
+    uint boxVertexCount = box.VertexCount() * (viewports.size());
+    uint boxIndexCount = box.IndexCount() * (viewports.size());
+
+    uint boxVertexBufferSize = boxVertexCount * sizeof(Vertex);
+    uint boxIndexBufferSize = boxIndexCount * sizeof(uint);
+
+    vector<Vertex> boxVertexes(boxVertexCount);
+
+    uint boxVertexIndex = 0;
+    for (uint i = 0; i < viewports.size(); i++) {
+        for (uint j = 0; j < box.VertexCount(); j++) {
+            boxVertexes[boxVertexIndex].pos = box.vertices[j].pos;
+            boxVertexes[boxVertexIndex].color = XMFLOAT4(DirectX::Colors::Orange);
+
+            boxVertexIndex++;
+        }
+    }
+
+    vector<uint> boxIndexes(boxIndexCount);
+
+    uint boxIndexIndex = 0;
+    for (uint i = 0; i < viewports.size(); i++) {
+        for (uint j = 0; j < box.IndexCount(); j++) {
+            boxIndexes[boxIndexIndex] = box.indices[j];
+
+            boxIndexIndex++;
+        }
+    }
+
+    SubMesh boxSubMesh;
     Object boxObj;
-    XMStoreFloat4x4(&boxObj.world,
-        XMMatrixScaling(0.4f, 0.4f, 0.4f) *
-        XMMatrixTranslation(-1.0f, 0.41f, 1.0f));
 
-    boxObj.mesh = new Mesh();
-    boxObj.mesh->VertexBuffer(box.VertexData(), box.VertexCount() * sizeof(Vertex), sizeof(Vertex));
-    boxObj.mesh->IndexBuffer(box.IndexData(), box.IndexCount() * sizeof(uint), DXGI_FORMAT_R32_UINT);
-    boxObj.mesh->ConstantBuffer(sizeof(ObjectConstants));
-    boxObj.submesh.indexCount = box.IndexCount();
-    scene.push_back(boxObj);
+    XMStoreFloat4x4(&boxObj.world,
+        XMMatrixScaling(-0.5f, -0.5f, -0.5f) *
+        XMMatrixTranslation(0.0f, 0.0f, 0.0f));
+
+    for (uint i = 0; i < viewports.size(); i++) {
+        boxSubMesh.indexCount = uint(box.IndexCount());
+        boxSubMesh.startIndex = uint(i * (boxIndexCount / viewports.size()));
+        boxSubMesh.baseVertex = uint(i * (boxVertexCount / viewports.size()));
+
+        boxObj.cbIndex = i;
+        boxObj.submesh = boxSubMesh;
+
+        scene.push_back(boxObj);
+    }
+
+    mesh = new Mesh();
+    mesh->VertexBuffer(boxVertexes.data(), boxVertexBufferSize, sizeof(Vertex));
+    mesh->IndexBuffer(boxIndexes.data(), boxIndexBufferSize, DXGI_FORMAT_R32_UINT);
+    mesh->ConstantBuffer(sizeof(ObjectConstants), uint(scene.size() * viewports.size()));
+
+    // ==========================================================
 
     BuildRootSignature();
     BuildPipelineState();
@@ -160,7 +205,7 @@ void Multi::Update()
             switch (i)
             {
             case 0:
-                WorldViewProj = objectWorld * tlView * perspectiveProj;
+                WorldViewProj = objectWorld * tlView * perspectiveProj;                
                 break;
             case 1:
                 WorldViewProj = objectWorld * tlView * perspectiveProj;
@@ -174,10 +219,11 @@ void Multi::Update()
             case 4:
                 WorldViewProj = objectWorld * brView * orthographicProj;
                 break;
-            }     
+            }    
 
-            XMStoreFloat4x4(&constants.WorldViewProj, XMMatrixTranspose(WorldViewProj));
-            iterableObject.mesh->CopyConstants(&constants, 0);
+             XMStoreFloat4x4(&constants.WorldViewProj, XMMatrixTranspose(WorldViewProj));
+
+            mesh->CopyConstants(&constants, i);
         }
     }
 }
@@ -191,16 +237,16 @@ void Multi::Draw()
 
         graphics->CommandList()->RSSetViewports(1, &viewports[i]);
 
+        ID3D12DescriptorHeap* descriptorHeap = mesh->ConstantBufferHeap();
+        graphics->CommandList()->SetDescriptorHeaps(1, &descriptorHeap);
+        graphics->CommandList()->SetGraphicsRootSignature(rootSignature);
+        graphics->CommandList()->IASetVertexBuffers(0, 1, mesh->VertexBufferView());
+        graphics->CommandList()->IASetIndexBuffer(mesh->IndexBufferView());
+        graphics->CommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
         for (auto& obj : scene)
         {
-            ID3D12DescriptorHeap* descriptorHeap = obj.mesh->ConstantBufferHeap();
-            graphics->CommandList()->SetDescriptorHeaps(1, &descriptorHeap);
-            graphics->CommandList()->SetGraphicsRootSignature(rootSignature);
-            graphics->CommandList()->IASetVertexBuffers(0, 1, obj.mesh->VertexBufferView());
-            graphics->CommandList()->IASetIndexBuffer(obj.mesh->IndexBufferView());
-            graphics->CommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-            graphics->CommandList()->SetGraphicsRootDescriptorTable(0, obj.mesh->ConstantBufferHandle(0));
+            graphics->CommandList()->SetGraphicsRootDescriptorTable(0, mesh->ConstantBufferHandle(obj.cbIndex));
 
             graphics->CommandList()->DrawIndexedInstanced(
                 obj.submesh.indexCount, 1,
@@ -292,7 +338,7 @@ void Multi::BuildPipelineState()
     D3D12_RASTERIZER_DESC rasterizer = {};
     //rasterizer.FillMode = D3D12_FILL_MODE_SOLID;
     rasterizer.FillMode = D3D12_FILL_MODE_WIREFRAME;
-    rasterizer.CullMode = D3D12_CULL_MODE_BACK;
+    rasterizer.CullMode = D3D12_CULL_MODE_FRONT;
     rasterizer.FrontCounterClockwise = FALSE;
     rasterizer.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
     rasterizer.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;

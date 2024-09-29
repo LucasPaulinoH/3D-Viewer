@@ -87,26 +87,15 @@ void Multi::Init()
 	uint boxVertexBufferSize = boxVertexCount * sizeof(Vertex);
 	uint boxIndexBufferSize = boxIndexCount * sizeof(uint);
 
-	vector<Vertex> boxVertexes(boxVertexCount);
+	vector<Vertex> boxVertexes;
+	vector<uint> boxIndexes;
 
-	uint boxVertexIndex = 0;
 	for (uint i = 0; i < viewports.size(); i++) {
-		for (uint j = 0; j < box.VertexCount(); j++) {
-			boxVertexes[boxVertexIndex].pos = box.vertices[j].pos;
-			boxVertexes[boxVertexIndex].color = XMFLOAT4(DirectX::Colors::Orange);
+		for (const auto& vertex : box.vertices)
+			boxVertexes.push_back({ vertex.pos, XMFLOAT4(DirectX::Colors::Orange) });
 
-			boxVertexIndex++;
-		}
-	}
-
-	vector<uint> boxIndexes(boxIndexCount);
-
-	uint boxIndexIndex = 0;
-	for (uint i = 0; i < viewports.size(); i++) {
-		for (uint j = 0; j < box.IndexCount(); j++) {
-			boxIndexes[boxIndexIndex] = box.indices[j];
-			boxIndexIndex++;
-		}
+		for (const auto& index : box.indices) 
+			boxIndexes.push_back(index);
 	}
 
 	SubMesh boxSubMesh;

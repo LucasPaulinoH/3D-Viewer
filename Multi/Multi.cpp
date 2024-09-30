@@ -1,5 +1,6 @@
 #include "DXUT.h"
 #include "ViewportsInitializer.h"
+#include "GeometricObject.h"
 
 struct ObjectConstants
 {
@@ -16,11 +17,13 @@ private:
 	vector<D3D12_VIEWPORT> viewports;
 	ID3D12RootSignature* rootSignature = nullptr;
 	ID3D12PipelineState* pipelineState = nullptr;
-	vector<Object> scene;
-
-	Mesh* mesh = nullptr;
+	vector<GeometricObject> scene;
 
 	XMFLOAT4X4 Identity = {};
+
+	XMFLOAT4 FIXED_OBJ_COLOR = XMFLOAT4(DirectX::Colors::DimGray);
+	XMFLOAT4 UNSELECTED_OBJ_COLOR = XMFLOAT4(DirectX::Colors::Orange);
+	XMFLOAT4 SELECTED_OBJ_COLOR = XMFLOAT4(DirectX::Colors::Red);
 
 	XMFLOAT4X4 TLView = {};
 	XMFLOAT4X4 TRView = {};
@@ -31,6 +34,8 @@ private:
 	XMFLOAT4X4 OrthographicProj = {};
 
 	bool showPerspectiveOnly = true;
+
+	uint selectedGOIndex = 1;
 
 	float theta = 0;
 	float phi = 0;
@@ -79,47 +84,23 @@ void Multi::Init()
 
 	// ==========================================================
 
+	Grid grid(6.0f, 6.0f, 20, 20);
+	GeometricObject gridGO(grid, FIXED_OBJ_COLOR, viewports.size(), sizeof(ObjectConstants));
+
+	scene.push_back(gridGO);
+	
 	Box box(2.0f, 2.0f, 2.0f);
+	GeometricObject boxGO(box, UNSELECTED_OBJ_COLOR, viewports.size(), sizeof(ObjectConstants));
 
-	uint boxVertexCount = box.VertexCount() * (viewports.size());
-	uint boxIndexCount = box.IndexCount() * (viewports.size());
+	scene.push_back(boxGO);
 
-	uint boxVertexBufferSize = boxVertexCount * sizeof(Vertex);
-	uint boxIndexBufferSize = boxIndexCount * sizeof(uint);
+	Cylinder cylinder(1.0f, 0.5f, 3.0f, 20, 20);
+	GeometricObject cylinderGO(cylinder, UNSELECTED_OBJ_COLOR, viewports.size(), sizeof(ObjectConstants));
 
-	vector<Vertex> boxVertexes;
-	vector<uint> boxIndexes;
+	scene.push_back(cylinderGO);
 
-	for (uint i = 0; i < viewports.size(); i++) {
-		for (const auto& vertex : box.vertices)
-			boxVertexes.push_back({ vertex.pos, XMFLOAT4(DirectX::Colors::Orange) });
+	Sphere sphere(1.0f, 20, 20);
 
-		for (const auto& index : box.indices) 
-			boxIndexes.push_back(index);
-	}
-
-	SubMesh boxSubMesh;
-	Object boxObj;
-
-	XMStoreFloat4x4(&boxObj.world,
-		XMMatrixScaling(-0.5f, -0.5f, -0.5f) *
-		XMMatrixTranslation(0.0f, 0.0f, 0.0f));
-
-	for (uint i = 0; i < viewports.size(); i++) {
-		boxSubMesh.indexCount = uint(box.IndexCount());
-		boxSubMesh.startIndex = uint(i * (boxIndexCount / viewports.size()));
-		boxSubMesh.baseVertex = uint(i * (boxVertexCount / viewports.size()));
-
-		boxObj.cbIndex = i;
-		boxObj.submesh = boxSubMesh;
-
-		scene.push_back(boxObj);
-	}
-
-	mesh = new Mesh();
-	mesh->VertexBuffer(boxVertexes.data(), boxVertexBufferSize, sizeof(Vertex));
-	mesh->IndexBuffer(boxIndexes.data(), boxIndexBufferSize, DXGI_FORMAT_R32_UINT);
-	mesh->ConstantBuffer(sizeof(ObjectConstants), uint(scene.size() * viewports.size()));
 
 	// ==========================================================
 
@@ -131,11 +112,95 @@ void Multi::Init()
 
 void Multi::Update()
 {
+	/* 
+		========== COMANDOS ==========
+
+		B -> Box 
+		Q -> Quad
+		C -> Cylinder 
+		S -> Sphere 
+		G -> GeoSphere 
+		P -> Plane (Grid) 
+		1 a 5 -> Arquivos
+		TAB -> Seleciona
+		DEL -> Remove
+		V -> Modo de Visualização
+
+		==============================
+	
+	*/
+
 	if (input->KeyPress(VK_ESCAPE))
 		window->Close();
 
 	if (input->KeyPress('V'))
 		showPerspectiveOnly = !showPerspectiveOnly;
+
+	if (input->KeyPress(VK_TAB)) {
+		selectedGOIndex = (selectedGOIndex + 1) % scene.size();
+		if (selectedGOIndex == 0) selectedGOIndex++;
+	}
+
+	
+	//	========== ESCALA ==========
+
+	if (input->KeyDown('I')) {
+		XMMATRIX selectedGOWorldMatrix = XMLoadFloat4x4(&scene[selectedGOIndex].object.world);
+		XMMATRIX scalingMatrix = XMMatrixScaling(1.01f, 1.01f, 1.01f);
+
+		XMStoreFloat4x4(&scene[selectedGOIndex].object.world, selectedGOWorldMatrix * scalingMatrix);
+	}
+
+	if (input->KeyDown('O')) {
+		XMMATRIX selectedGOWorldMatrix = XMLoadFloat4x4(&scene[selectedGOIndex].object.world);
+		XMMATRIX scalingMatrix = XMMatrixScaling(0.99f, 0.99f, 0.99f);
+
+		XMStoreFloat4x4(&scene[selectedGOIndex].object.world, selectedGOWorldMatrix * scalingMatrix);
+	}
+
+	//	============================
+
+
+	//	========== TRANSLAÇÃO ==========
+
+	if (input->KeyDown(VK_UP) && input->KeyDown(VK_SHIFT)) {
+		XMMATRIX selectedGOWorldMatrix = XMLoadFloat4x4(&scene[selectedGOIndex].object.world);
+		XMMATRIX xTranslationMatrix = XMMatrixTranslation(0.0f, 0.01f, 0.0f);
+
+		XMStoreFloat4x4(&scene[selectedGOIndex].object.world, selectedGOWorldMatrix * xTranslationMatrix);
+	} else if (input->KeyDown(VK_DOWN) && input->KeyDown(VK_SHIFT)) {
+		XMMATRIX selectedGOWorldMatrix = XMLoadFloat4x4(&scene[selectedGOIndex].object.world);
+		XMMATRIX xTranslationMatrix = XMMatrixTranslation(0.0f, -0.01f, 0.0f);
+
+		XMStoreFloat4x4(&scene[selectedGOIndex].object.world, selectedGOWorldMatrix * xTranslationMatrix);
+	} else if (input->KeyDown(VK_UP)) {
+		XMMATRIX selectedGOWorldMatrix = XMLoadFloat4x4(&scene[selectedGOIndex].object.world);
+		XMMATRIX xTranslationMatrix =  XMMatrixTranslation(0.0f, 0.0f, -0.01f);
+
+		XMStoreFloat4x4(&scene[selectedGOIndex].object.world, selectedGOWorldMatrix * xTranslationMatrix);
+	} else if (input->KeyDown(VK_DOWN)) {
+		XMMATRIX selectedGOWorldMatrix = XMLoadFloat4x4(&scene[selectedGOIndex].object.world);
+		XMMATRIX xTranslationMatrix = XMMatrixTranslation(0.0f, 0.0f, 0.01f);
+
+		XMStoreFloat4x4(&scene[selectedGOIndex].object.world, selectedGOWorldMatrix * xTranslationMatrix);
+	}
+
+	if (input->KeyDown(VK_RIGHT)) {
+		XMMATRIX selectedGOWorldMatrix = XMLoadFloat4x4(&scene[selectedGOIndex].object.world);
+		XMMATRIX xTranslationMatrix = XMMatrixTranslation(-0.01f, 0.0f, 0.0f);
+
+		XMStoreFloat4x4(&scene[selectedGOIndex].object.world, selectedGOWorldMatrix * xTranslationMatrix);
+	}
+
+	if (input->KeyDown(VK_LEFT)) {
+		XMMATRIX selectedGOWorldMatrix = XMLoadFloat4x4(&scene[selectedGOIndex].object.world);
+		XMMATRIX xTranslationMatrix = XMMatrixTranslation(0.01f, 0.0f, 0.0f);
+
+		XMStoreFloat4x4(&scene[selectedGOIndex].object.world, selectedGOWorldMatrix * xTranslationMatrix);
+	}
+
+	//	================================
+
 
 	float mousePosX = (float)input->MouseX();
 	float mousePosY = (float)input->MouseY();
@@ -170,13 +235,13 @@ void Multi::Update()
 	XMMATRIX tlView = generateObjectViewMatrix(x, y, z);
 	XMStoreFloat4x4(&TLView, tlView);
 
-	XMMATRIX trView = generateObjectViewMatrix(10.0f, 10.0f, 0.01f);
+	XMMATRIX trView = generateObjectViewMatrix(0.0f, 10.0f, 0.01f);
 	XMStoreFloat4x4(&TRView, trView);
 
-	XMMATRIX blView = generateObjectViewMatrix(10.0f, 0.01f, 10.0f);
+	XMMATRIX blView = generateObjectViewMatrix(10.0f, 0.01f, 0.0f);
 	XMStoreFloat4x4(&BLView, blView);
 
-	XMMATRIX brView = generateObjectViewMatrix(10.0f, 0.01f, 10.0f);
+	XMMATRIX brView = generateObjectViewMatrix(0.0f, 0.01f, 10.0f);
 	XMStoreFloat4x4(&BRView, brView);
 
 	XMMATRIX perspectiveProj = XMLoadFloat4x4(&PerspectiveProj);
@@ -184,33 +249,33 @@ void Multi::Update()
 
 	for (auto& iterableObject : scene)
 	{
-		XMMATRIX objectWorld = XMLoadFloat4x4(&iterableObject.world);
+		XMMATRIX objectWorld = XMLoadFloat4x4(&iterableObject.object.world);
 
 		XMMATRIX WorldViewProj;
 		ObjectConstants constants;
 
-		switch (iterableObject.cbIndex)
-		{
-		case 0:
-			WorldViewProj = objectWorld * tlView * perspectiveProj;
-			break;
-		case 1:
-			WorldViewProj = objectWorld * tlView * perspectiveProj;
-			break;
-		case 2:
-			WorldViewProj = objectWorld * trView * orthographicProj;
-			break;
-		case 3:
-			WorldViewProj = objectWorld * blView * orthographicProj;
-			break;
-		case 4:
-			WorldViewProj = objectWorld * brView * orthographicProj;
-			break;
+		for (uint i = 0; i < viewports.size(); i++) {
+			switch (i)
+			{
+			case 0:
+			case 1:
+				WorldViewProj = objectWorld * tlView * perspectiveProj;
+				break;
+			case 2:
+				WorldViewProj = objectWorld * trView * orthographicProj;
+				break;
+			case 3:
+				WorldViewProj = objectWorld * blView * orthographicProj;
+				break;
+			case 4:
+				WorldViewProj = objectWorld * brView * orthographicProj;
+				break;
+			}
+
+			XMStoreFloat4x4(&constants.WorldViewProj, XMMatrixTranspose(WorldViewProj));
+
+			iterableObject.object.mesh->CopyConstants(&constants, i);
 		}
-
-		XMStoreFloat4x4(&constants.WorldViewProj, XMMatrixTranspose(WorldViewProj));
-
-		mesh->CopyConstants(&constants, iterableObject.cbIndex);
 	}
 
 }
@@ -219,29 +284,31 @@ void Multi::Draw()
 {
 	graphics->Clear(pipelineState);
 
-	ID3D12DescriptorHeap* descriptorHeap = mesh->ConstantBufferHeap();
-	graphics->CommandList()->SetDescriptorHeaps(1, &descriptorHeap);
-	graphics->CommandList()->SetGraphicsRootSignature(rootSignature);
-	graphics->CommandList()->IASetVertexBuffers(0, 1, mesh->VertexBufferView());
-	graphics->CommandList()->IASetIndexBuffer(mesh->IndexBufferView());
-	graphics->CommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-	for (uint i = 1; i < 5; i++)
+	for (auto& iterableGO : scene)
 	{
-		Object& obj = scene[i];
+		ID3D12DescriptorHeap* descriptorHeap = iterableGO.object.mesh->ConstantBufferHeap();
+		graphics->CommandList()->SetDescriptorHeaps(1, &descriptorHeap);
+		graphics->CommandList()->SetGraphicsRootSignature(rootSignature);
+		graphics->CommandList()->IASetVertexBuffers(0, 1, iterableGO.object.mesh->VertexBufferView());
+		graphics->CommandList()->IASetIndexBuffer(iterableGO.object.mesh->IndexBufferView());
+		graphics->CommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-		graphics->CommandList()->RSSetViewports(1, &viewports[i]);
+		for (uint i = 0; i < viewports.size(); i++) {
+			if (i == 0 && !showPerspectiveOnly) continue;
 
-		graphics->CommandList()->SetGraphicsRootDescriptorTable(0, mesh->ConstantBufferHandle(obj.cbIndex));
+			graphics->CommandList()->RSSetViewports(1, &viewports[i]);
 
-		graphics->CommandList()->DrawIndexedInstanced(
-			obj.submesh.indexCount, 1,
-			obj.submesh.startIndex,
-			obj.submesh.baseVertex,
-			0);
+			graphics->CommandList()->SetGraphicsRootDescriptorTable(0, iterableGO.object.mesh->ConstantBufferHandle(i));
+
+			graphics->CommandList()->DrawIndexedInstanced(
+				iterableGO.subMeshes[i].indexCount, 1,
+				iterableGO.subMeshes[i].startIndex,
+				iterableGO.subMeshes[i].baseVertex,
+				0);
+
+			if (i == 0 && showPerspectiveOnly) break;
+		}
 	}
-
-
 
 	graphics->Present();
 }
@@ -251,8 +318,8 @@ void Multi::Finalize()
 	rootSignature->Release();
 	pipelineState->Release();
 
-	for (auto& obj : scene)
-		delete obj.mesh;
+	for (auto& iterableGO : scene)
+		delete iterableGO.object.mesh;
 }
 
 XMMATRIX Multi::generateObjectViewMatrix(float x, float y, float z) {
@@ -323,7 +390,7 @@ void Multi::BuildPipelineState()
 	D3D12_RASTERIZER_DESC rasterizer = {};
 	//rasterizer.FillMode = D3D12_FILL_MODE_SOLID;
 	rasterizer.FillMode = D3D12_FILL_MODE_WIREFRAME;
-	rasterizer.CullMode = D3D12_CULL_MODE_FRONT;
+	rasterizer.CullMode = D3D12_CULL_MODE_BACK;
 	rasterizer.FrontCounterClockwise = FALSE;
 	rasterizer.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
 	rasterizer.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;

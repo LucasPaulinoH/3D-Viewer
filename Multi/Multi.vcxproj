@@ -164,6 +164,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h" />
+    <ClInclude Include="GeometricObject.h" />
     <ClInclude Include="Geometry.h" />
     <ClInclude Include="DXUT.h" />
     <ClInclude Include="Engine.h" />

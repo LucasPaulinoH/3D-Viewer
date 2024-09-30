@@ -93,6 +93,7 @@
     </ClInclude>
     <ClInclude Include="ViewportsInitializer.h" />
     <ClInclude Include="GeometricObject.h" />
+    <ClInclude Include="OperationHandler.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Pixel.hlsl">

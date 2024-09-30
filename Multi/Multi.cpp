@@ -1,6 +1,7 @@
 #include "DXUT.h"
 #include "ViewportsInitializer.h"
 #include "GeometricObject.h"
+#include "OperationHandler.h"
 
 struct ObjectConstants
 {
@@ -34,8 +35,9 @@ private:
 	XMFLOAT4X4 OrthographicProj = {};
 
 	bool showPerspectiveOnly = true;
-
 	uint selectedGOIndex = 1;
+
+	OperationHandler operationHandler;
 
 	float theta = 0;
 	float phi = 0;
@@ -148,67 +150,8 @@ void Multi::Update()
 		if (selectedGOIndex == 0) selectedGOIndex++;
 	}
 
-	XMMATRIX selectedGOWorldMatrix = XMLoadFloat4x4(&scene[selectedGOIndex].object.world);
-
-	XMMATRIX scaleMatrix = XMMatrixIdentity();
-	XMMATRIX rotationMatrix = XMMatrixIdentity();
-	XMMATRIX translationMatrix = XMMatrixIdentity();
-
-	// Acumula as transformações na nova matriz world
-	XMMATRIX newWorldMatrix = selectedGOWorldMatrix;
-
-	//	========== ESCALA ==========
-
-	if (input->KeyDown('I'))
-		scaleMatrix = XMMatrixScaling(1.05f, 1.05f, 1.05f);
-
-	if (input->KeyDown('O'))
-		scaleMatrix = XMMatrixScaling(0.95f, 0.95f, 0.95f);
-
-	//	========== ROTAÇÃO ==========
-
-	if (input->KeyDown(VK_NUMPAD5))
-		rotationMatrix = XMMatrixRotationX(-0.05f);
-
-	if (input->KeyDown(VK_NUMPAD2))
-		rotationMatrix = XMMatrixRotationX(0.05f);
-
-	if (input->KeyDown(VK_NUMPAD1))
-		rotationMatrix = XMMatrixRotationZ(-0.05f);
-
-	if (input->KeyDown(VK_NUMPAD3))
-		rotationMatrix = XMMatrixRotationZ(0.05f);
-
-	if (input->KeyDown(VK_NUMPAD7))
-		rotationMatrix = XMMatrixRotationY(-0.05f);
-
-	if (input->KeyDown(VK_NUMPAD9))
-		rotationMatrix = XMMatrixRotationY(0.05f);
-
-	//	========== TRANSLAÇÃO ==========
-
-	if (input->KeyDown(VK_UP) && input->KeyDown(VK_SHIFT))
-		translationMatrix = XMMatrixTranslation(0.0f, 0.05f, 0.0f);
-
-	else if (input->KeyDown(VK_DOWN) && input->KeyDown(VK_SHIFT))
-		translationMatrix = XMMatrixTranslation(0.0f, -0.05f, 0.0f);
-
-	else if (input->KeyDown(VK_UP))
-		translationMatrix = XMMatrixTranslation(0.0f, 0.0f, -0.05f);
-
-	else if (input->KeyDown(VK_DOWN))
-		translationMatrix = XMMatrixTranslation(0.0f, 0.0f, 0.05f);
-
-	if (input->KeyDown(VK_RIGHT))
-		translationMatrix = XMMatrixTranslation(-0.05f, 0.0f, 0.0f);
-
-	if (input->KeyDown(VK_LEFT))
-		translationMatrix = XMMatrixTranslation(0.05f, 0.0f, 0.0f);
-
-	newWorldMatrix = scaleMatrix * rotationMatrix * translationMatrix * newWorldMatrix;
-
-	XMStoreFloat4x4(&scene[selectedGOIndex].object.world, newWorldMatrix);
-
+	XMMATRIX updatedWorldMatrix = operationHandler.executeGeometricOperation(input, XMLoadFloat4x4(&scene[selectedGOIndex].object.world));
+	XMStoreFloat4x4(&scene[selectedGOIndex].object.world, updatedWorldMatrix);
 
 	float mousePosX = (float)input->MouseX();
 	float mousePosY = (float)input->MouseY();

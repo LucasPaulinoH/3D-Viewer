@@ -1,5 +1,5 @@
 ﻿  Multi.cpp
-C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(88,62): warning C4267: 'argumento': conversão de 'size_t' para 'uint', possível perda de dados
-C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(93,65): warning C4267: 'argumento': conversão de 'size_t' para 'uint', possível perda de dados
-C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(98,75): warning C4267: 'argumento': conversão de 'size_t' para 'uint', possível perda de dados
+C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(90,62): warning C4267: 'argumento': conversão de 'size_t' para 'uint', possível perda de dados
+C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(95,65): warning C4267: 'argumento': conversão de 'size_t' para 'uint', possível perda de dados
+C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(100,75): warning C4267: 'argumento': conversão de 'size_t' para 'uint', possível perda de dados
   Multi.vcxproj -> C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\x64\Debug\Multi.exe

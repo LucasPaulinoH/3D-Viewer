@@ -60,7 +60,8 @@ public:
 		}
 	}
 
-	~GeometricObject() {}
+	~GeometricObject() {
+	}
 
 	void changeGOColor(XMFLOAT4 color) {
 		for (auto& iterableVertex : vertexes)

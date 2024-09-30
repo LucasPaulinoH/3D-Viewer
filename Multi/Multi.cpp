@@ -68,7 +68,7 @@ void Multi::Init()
 	lastMousePosX = (float)input->MouseX();
 	lastMousePosY = (float)input->MouseY();
 
-	Identity = TLView = {
+	Identity = TLView = TRView = BLView = BRView = {
 		1.0f, 0.0f, 0.0f, 0.0f,
 		0.0f, 1.0f, 0.0f, 0.0f,
 		0.0f, 0.0f, 1.0f, 0.0f,
@@ -136,70 +136,78 @@ void Multi::Update()
 	if (input->KeyPress('V'))
 		showPerspectiveOnly = !showPerspectiveOnly;
 
+	if (input->KeyPress(VK_DELETE)) {
+		scene.erase(scene.begin() + selectedGOIndex);
+
+		selectedGOIndex = (selectedGOIndex + 1) % scene.size();
+		if (selectedGOIndex == 0) selectedGOIndex++;
+	}
+
 	if (input->KeyPress(VK_TAB)) {
 		selectedGOIndex = (selectedGOIndex + 1) % scene.size();
 		if (selectedGOIndex == 0) selectedGOIndex++;
 	}
 
-	
+	XMMATRIX selectedGOWorldMatrix = XMLoadFloat4x4(&scene[selectedGOIndex].object.world);
+
+	XMMATRIX scaleMatrix = XMMatrixIdentity();
+	XMMATRIX rotationMatrix = XMMatrixIdentity();
+	XMMATRIX translationMatrix = XMMatrixIdentity();
+
+	// Acumula as transformações na nova matriz world
+	XMMATRIX newWorldMatrix = selectedGOWorldMatrix;
+
 	//	========== ESCALA ==========
 
-	if (input->KeyDown('I')) {
-		XMMATRIX selectedGOWorldMatrix = XMLoadFloat4x4(&scene[selectedGOIndex].object.world);
-		XMMATRIX scalingMatrix = XMMatrixScaling(1.01f, 1.01f, 1.01f);
+	if (input->KeyDown('I'))
+		scaleMatrix = XMMatrixScaling(1.05f, 1.05f, 1.05f);
 
-		XMStoreFloat4x4(&scene[selectedGOIndex].object.world, selectedGOWorldMatrix * scalingMatrix);
-	}
+	if (input->KeyDown('O'))
+		scaleMatrix = XMMatrixScaling(0.95f, 0.95f, 0.95f);
 
-	if (input->KeyDown('O')) {
-		XMMATRIX selectedGOWorldMatrix = XMLoadFloat4x4(&scene[selectedGOIndex].object.world);
-		XMMATRIX scalingMatrix = XMMatrixScaling(0.99f, 0.99f, 0.99f);
+	//	========== ROTAÇÃO ==========
 
-		XMStoreFloat4x4(&scene[selectedGOIndex].object.world, selectedGOWorldMatrix * scalingMatrix);
-	}
+	if (input->KeyDown(VK_NUMPAD5))
+		rotationMatrix = XMMatrixRotationX(-0.05f);
 
-	//	============================
+	if (input->KeyDown(VK_NUMPAD2))
+		rotationMatrix = XMMatrixRotationX(0.05f);
 
+	if (input->KeyDown(VK_NUMPAD1))
+		rotationMatrix = XMMatrixRotationZ(-0.05f);
+
+	if (input->KeyDown(VK_NUMPAD3))
+		rotationMatrix = XMMatrixRotationZ(0.05f);
+
+	if (input->KeyDown(VK_NUMPAD7))
+		rotationMatrix = XMMatrixRotationY(-0.05f);
+
+	if (input->KeyDown(VK_NUMPAD9))
+		rotationMatrix = XMMatrixRotationY(0.05f);
 
 	//	========== TRANSLAÇÃO ==========
 
-	if (input->KeyDown(VK_UP) && input->KeyDown(VK_SHIFT)) {
-		XMMATRIX selectedGOWorldMatrix = XMLoadFloat4x4(&scene[selectedGOIndex].object.world);
-		XMMATRIX xTranslationMatrix = XMMatrixTranslation(0.0f, 0.01f, 0.0f);
+	if (input->KeyDown(VK_UP) && input->KeyDown(VK_SHIFT))
+		translationMatrix = XMMatrixTranslation(0.0f, 0.05f, 0.0f);
 
-		XMStoreFloat4x4(&scene[selectedGOIndex].object.world, selectedGOWorldMatrix * xTranslationMatrix);
-	} else if (input->KeyDown(VK_DOWN) && input->KeyDown(VK_SHIFT)) {
-		XMMATRIX selectedGOWorldMatrix = XMLoadFloat4x4(&scene[selectedGOIndex].object.world);
-		XMMATRIX xTranslationMatrix = XMMatrixTranslation(0.0f, -0.01f, 0.0f);
+	else if (input->KeyDown(VK_DOWN) && input->KeyDown(VK_SHIFT))
+		translationMatrix = XMMatrixTranslation(0.0f, -0.05f, 0.0f);
 
-		XMStoreFloat4x4(&scene[selectedGOIndex].object.world, selectedGOWorldMatrix * xTranslationMatrix);
-	} else if (input->KeyDown(VK_UP)) {
-		XMMATRIX selectedGOWorldMatrix = XMLoadFloat4x4(&scene[selectedGOIndex].object.world);
-		XMMATRIX xTranslationMatrix =  XMMatrixTranslation(0.0f, 0.0f, -0.01f);
+	else if (input->KeyDown(VK_UP))
+		translationMatrix = XMMatrixTranslation(0.0f, 0.0f, -0.05f);
 
-		XMStoreFloat4x4(&scene[selectedGOIndex].object.world, selectedGOWorldMatrix * xTranslationMatrix);
-	} else if (input->KeyDown(VK_DOWN)) {
-		XMMATRIX selectedGOWorldMatrix = XMLoadFloat4x4(&scene[selectedGOIndex].object.world);
-		XMMATRIX xTranslationMatrix = XMMatrixTranslation(0.0f, 0.0f, 0.01f);
+	else if (input->KeyDown(VK_DOWN))
+		translationMatrix = XMMatrixTranslation(0.0f, 0.0f, 0.05f);
 
-		XMStoreFloat4x4(&scene[selectedGOIndex].object.world, selectedGOWorldMatrix * xTranslationMatrix);
-	}
+	if (input->KeyDown(VK_RIGHT))
+		translationMatrix = XMMatrixTranslation(-0.05f, 0.0f, 0.0f);
 
-	if (input->KeyDown(VK_RIGHT)) {
-		XMMATRIX selectedGOWorldMatrix = XMLoadFloat4x4(&scene[selectedGOIndex].object.world);
-		XMMATRIX xTranslationMatrix = XMMatrixTranslation(-0.01f, 0.0f, 0.0f);
+	if (input->KeyDown(VK_LEFT))
+		translationMatrix = XMMatrixTranslation(0.05f, 0.0f, 0.0f);
 
-		XMStoreFloat4x4(&scene[selectedGOIndex].object.world, selectedGOWorldMatrix * xTranslationMatrix);
-	}
+	newWorldMatrix = scaleMatrix * rotationMatrix * translationMatrix * newWorldMatrix;
 
-	if (input->KeyDown(VK_LEFT)) {
-		XMMATRIX selectedGOWorldMatrix = XMLoadFloat4x4(&scene[selectedGOIndex].object.world);
-		XMMATRIX xTranslationMatrix = XMMatrixTranslation(0.01f, 0.0f, 0.0f);
-
-		XMStoreFloat4x4(&scene[selectedGOIndex].object.world, selectedGOWorldMatrix * xTranslationMatrix);
-	}
-
-	//	================================
+	XMStoreFloat4x4(&scene[selectedGOIndex].object.world, newWorldMatrix);
 
 
 	float mousePosX = (float)input->MouseX();
@@ -273,7 +281,6 @@ void Multi::Update()
 			}
 
 			XMStoreFloat4x4(&constants.WorldViewProj, XMMatrixTranspose(WorldViewProj));
-
 			iterableObject.object.mesh->CopyConstants(&constants, i);
 		}
 	}
@@ -458,9 +465,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 	{
 		Engine* engine = new Engine();
 		engine->window->Mode(WINDOWED);
-		engine->window->Size(1024, 720);
+		engine->window->Size(1366, 768);
 		engine->window->Color(25, 25, 25);
-		engine->window->Title("Multi");
+		engine->window->Title("3DViewer");
 		engine->window->Icon(IDI_ICON);
 		engine->window->Cursor(IDC_CURSOR);
 		engine->window->LostFocus(Engine::Pause);

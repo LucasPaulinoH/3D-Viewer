@@ -153,7 +153,6 @@
     <ClCompile Include="App.cpp" />
     <ClCompile Include="GeometricObject.cpp" />
     <ClCompile Include="Geometry.cpp" />
-    <ClCompile Include="GOSpawner.cpp" />
     <ClCompile Include="OperationHandler.cpp" />
     <ClCompile Include="ViewportsInitializer.cpp" />
     <ClCompile Include="Multi.cpp" />
@@ -172,7 +171,6 @@
     <ClInclude Include="DXUT.h" />
     <ClInclude Include="Engine.h" />
     <ClInclude Include="Error.h" />
-    <ClInclude Include="GOSpawner.h" />
     <ClInclude Include="Graphics.h" />
     <ClInclude Include="OperationHandler.h" />
     <ClInclude Include="ViewportsInitializer.h" />

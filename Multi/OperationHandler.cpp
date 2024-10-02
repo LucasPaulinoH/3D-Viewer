@@ -61,5 +61,5 @@ XMMATRIX OperationHandler::getTranslationMatrix(Input* input) {
 }
 
 XMMATRIX OperationHandler::executeGeometricOperation(Input* input, XMMATRIX currentWorldMatrix) {
-	return getScaleMatrix(input) * getRotationMatrix(input) * getTranslationMatrix(input) * currentWorldMatrix;
+	return (getScaleMatrix(input) * getRotationMatrix(input) * getTranslationMatrix(input)) * currentWorldMatrix;
 }

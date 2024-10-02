@@ -52,7 +52,6 @@
     <ClCompile Include="ViewportsInitializer.cpp" />
     <ClCompile Include="GeometricObject.cpp" />
     <ClCompile Include="OperationHandler.cpp" />
-    <ClCompile Include="GOSpawner.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="App.h">
@@ -97,7 +96,6 @@
     <ClInclude Include="ViewportsInitializer.h" />
     <ClInclude Include="GeometricObject.h" />
     <ClInclude Include="OperationHandler.h" />
-    <ClInclude Include="GOSpawner.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Pixel.hlsl">

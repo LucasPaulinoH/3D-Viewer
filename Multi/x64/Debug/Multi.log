@@ -1,1 +1,26 @@
-﻿  Multi.vcxproj -> C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\x64\Debug\Multi.exe
+﻿  Multi.cpp
+C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(94,62): warning C4267: 'argumento': conversão de 'size_t' para 'uint', possível perda de dados
+C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(124,26): warning C4353: extensão não padrão usada: constante 0 como expressão de função. Use função intrínseca '__noop'
+C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(136,76): warning C4267: 'argumento': conversão de 'size_t' para 'uint', possível perda de dados
+C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(137,34): warning C4267: '=': conversão de 'size_t' para 'uint', possível perda de dados
+C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(141,81): warning C4267: 'argumento': conversão de 'size_t' para 'uint', possível perda de dados
+C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(142,34): warning C4267: '=': conversão de 'size_t' para 'uint', possível perda de dados
+C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(146,82): warning C4267: 'argumento': conversão de 'size_t' para 'uint', possível perda de dados
+C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(147,34): warning C4267: '=': conversão de 'size_t' para 'uint', possível perda de dados
+C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(151,77): warning C4267: 'argumento': conversão de 'size_t' para 'uint', possível perda de dados
+C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(152,34): warning C4267: '=': conversão de 'size_t' para 'uint', possível perda de dados
+C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(156,77): warning C4267: 'argumento': conversão de 'size_t' para 'uint', possível perda de dados
+C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(157,34): warning C4267: '=': conversão de 'size_t' para 'uint', possível perda de dados
+C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(161,79): warning C4267: 'argumento': conversão de 'size_t' para 'uint', possível perda de dados
+C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(162,34): warning C4267: '=': conversão de 'size_t' para 'uint', possível perda de dados
+C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(165,107): warning C4267: 'argumento': conversão de 'size_t' para 'uint', possível perda de dados
+C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(166,34): warning C4267: '=': conversão de 'size_t' para 'uint', possível perda de dados
+C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(169,105): warning C4267: 'argumento': conversão de 'size_t' para 'uint', possível perda de dados
+C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(170,34): warning C4267: '=': conversão de 'size_t' para 'uint', possível perda de dados
+C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(173,108): warning C4267: 'argumento': conversão de 'size_t' para 'uint', possível perda de dados
+C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(174,34): warning C4267: '=': conversão de 'size_t' para 'uint', possível perda de dados
+C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(177,106): warning C4267: 'argumento': conversão de 'size_t' para 'uint', possível perda de dados
+C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(178,34): warning C4267: '=': conversão de 'size_t' para 'uint', possível perda de dados
+C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(181,107): warning C4267: 'argumento': conversão de 'size_t' para 'uint', possível perda de dados
+C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\Multi\Multi.cpp(182,34): warning C4267: '=': conversão de 'size_t' para 'uint', possível perda de dados
+  Multi.vcxproj -> C:\Users\lucas\Documents\Repositórios GitHub\3D-Viewer\x64\Debug\Multi.exe

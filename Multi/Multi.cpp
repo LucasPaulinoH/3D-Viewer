@@ -1,7 +1,12 @@
 #include "DXUT.h"
+#include <vector>
+#include <fstream>
+#include <sstream>
 #include "ViewportsInitializer.h"
 #include "GeometricObject.h"
 #include "OperationHandler.h"
+
+using namespace std;
 
 struct ObjectConstants
 {
@@ -52,6 +57,7 @@ public:
 	void Finalize();
 
 	XMMATRIX generateObjectViewMatrix(float x, float y, float z);
+	Geometry loadGeometryFromFile(string filepath);
 
 	void BuildRootSignature();
 	void BuildPipelineState();
@@ -70,7 +76,7 @@ void Multi::Init()
 	lastMousePosX = (float)input->MouseX();
 	lastMousePosY = (float)input->MouseY();
 
-	Identity = TLView = TRView = BLView = BRView = {
+	Identity = TLView = {
 		1.0f, 0.0f, 0.0f, 0.0f,
 		0.0f, 1.0f, 0.0f, 0.0f,
 		0.0f, 0.0f, 1.0f, 0.0f,
@@ -84,14 +90,10 @@ void Multi::Init()
 		10, 7, 1.0f, 100.0f
 	));
 
-	// ==========================================================
-
 	Grid grid(6.0f, 6.0f, 20, 20);
 	GeometricObject gridGO(grid, FIXED_OBJ_COLOR, viewports.size(), sizeof(ObjectConstants));
 
 	scene.push_back(gridGO);
-
-	// ==========================================================
 
 	BuildRootSignature();
 	BuildPipelineState();
@@ -159,6 +161,27 @@ void Multi::Update()
 		scene.push_back(GeometricObject(sphere, UNSELECTED_OBJ_COLOR, viewports.size(), sizeof(ObjectConstants)));
 		selectedGOIndex = scene.size() - 1;
 	}
+	if (input->KeyPress('1')) {
+		scene.push_back(GeometricObject(loadGeometryFromFile("monkey.obj"), UNSELECTED_OBJ_COLOR, viewports.size(), sizeof(ObjectConstants)));
+		selectedGOIndex = scene.size() - 1;
+	}
+	if (input->KeyPress('2')) {
+		scene.push_back(GeometricObject(loadGeometryFromFile("ball.obj"), UNSELECTED_OBJ_COLOR, viewports.size(), sizeof(ObjectConstants)));
+		selectedGOIndex = scene.size() - 1;
+	}
+	if (input->KeyPress('3')) {
+		scene.push_back(GeometricObject(loadGeometryFromFile("capsule.obj"), UNSELECTED_OBJ_COLOR, viewports.size(), sizeof(ObjectConstants)));
+		selectedGOIndex = scene.size() - 1;
+	}
+	if (input->KeyPress('4')) {
+		scene.push_back(GeometricObject(loadGeometryFromFile("house.obj"), UNSELECTED_OBJ_COLOR, viewports.size(), sizeof(ObjectConstants)));
+		selectedGOIndex = scene.size() - 1;
+	}
+	if (input->KeyPress('5')) {
+		scene.push_back(GeometricObject(loadGeometryFromFile("thorus.obj"), UNSELECTED_OBJ_COLOR, viewports.size(), sizeof(ObjectConstants)));
+		selectedGOIndex = scene.size() - 1;
+	}
+
 	if (selectedGOIndex > 0 && scene.size()) {
 		XMMATRIX updatedWorldMatrix = operationHandler.executeGeometricOperation(input, XMLoadFloat4x4(&scene[selectedGOIndex].object.world));
 		XMStoreFloat4x4(&scene[selectedGOIndex].object.world, updatedWorldMatrix);
@@ -245,6 +268,10 @@ void Multi::Update()
 void Multi::Draw()
 {
 	graphics->Clear(pipelineState);
+	
+	if (!showPerspectiveOnly) {
+
+	}
 
 	for (auto& iterableGO : scene)
 	{
@@ -290,6 +317,36 @@ XMMATRIX Multi::generateObjectViewMatrix(float x, float y, float z) {
 	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
 	return XMMatrixLookAtLH(pos, target, up);
+}
+
+Geometry Multi::loadGeometryFromFile(string filepath) {
+	ifstream fileInputStream(filepath);
+
+	if (!fileInputStream.is_open()) exit(EXIT_FAILURE);
+
+	Geometry geometry;
+	string currentLine, prefix;
+
+	while (getline(fileInputStream, currentLine)) {
+		stringstream ss(currentLine);
+
+		ss >> prefix;
+		if (prefix == "v") {
+			float x, y, z;
+			ss >> x >> y >> z;
+
+			geometry.vertices.push_back({ {x, y, z}, UNSELECTED_OBJ_COLOR });
+		}
+		else if (prefix == "f") {
+			string vertex;
+
+			while (ss >> vertex)
+				geometry.indices.push_back(stoi(vertex.substr(0, vertex.find('/'))) - 1);
+		}
+	}
+
+	fileInputStream.close();
+	return geometry;
 }
 
 void Multi::BuildRootSignature()
@@ -419,8 +476,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 	try
 	{
 		Engine* engine = new Engine();
-		engine->window->Mode(FULLSCREEN);
-		engine->window->Size(1920, 1080);
+		engine->window->Mode(WINDOWED);
+		engine->window->Size(1366, 768);
 		engine->window->Color(25, 25, 25);
 		engine->window->Title("3DViewer");
 		engine->window->Icon(IDI_ICON);

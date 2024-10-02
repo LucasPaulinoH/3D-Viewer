@@ -23,8 +23,8 @@ private:
 	XMFLOAT4X4 Identity = {};
 
 	XMFLOAT4 FIXED_OBJ_COLOR = XMFLOAT4(DirectX::Colors::DimGray);
-	XMFLOAT4 UNSELECTED_OBJ_COLOR = XMFLOAT4(DirectX::Colors::Orange);
-	XMFLOAT4 SELECTED_OBJ_COLOR = XMFLOAT4(DirectX::Colors::Red);
+	XMFLOAT4 UNSELECTED_OBJ_COLOR = XMFLOAT4(DirectX::Colors::Aquamarine);
+	XMFLOAT4 SELECTED_OBJ_COLOR = XMFLOAT4(DirectX::Colors::Blue);
 
 	XMFLOAT4X4 TLView = {};
 	XMFLOAT4X4 TRView = {};
@@ -35,7 +35,7 @@ private:
 	XMFLOAT4X4 OrthographicProj = {};
 
 	bool showPerspectiveOnly = true;
-	uint selectedGOIndex = 1;
+	uint selectedGOIndex = 0;
 
 	OperationHandler operationHandler;
 
@@ -90,19 +90,6 @@ void Multi::Init()
 	GeometricObject gridGO(grid, FIXED_OBJ_COLOR, viewports.size(), sizeof(ObjectConstants));
 
 	scene.push_back(gridGO);
-	
-	Box box(2.0f, 2.0f, 2.0f);
-	GeometricObject boxGO(box, UNSELECTED_OBJ_COLOR, viewports.size(), sizeof(ObjectConstants));
-
-	scene.push_back(boxGO);
-
-	Cylinder cylinder(1.0f, 0.5f, 3.0f, 20, 20);
-	GeometricObject cylinderGO(cylinder, UNSELECTED_OBJ_COLOR, viewports.size(), sizeof(ObjectConstants));
-
-	scene.push_back(cylinderGO);
-
-	Sphere sphere(1.0f, 20, 20);
-
 
 	// ==========================================================
 
@@ -114,23 +101,7 @@ void Multi::Init()
 
 void Multi::Update()
 {
-	/* 
-		========== COMANDOS ==========
-
-		B -> Box 
-		Q -> Quad
-		C -> Cylinder 
-		S -> Sphere 
-		G -> GeoSphere 
-		P -> Plane (Grid) 
-		1 a 5 -> Arquivos
-		TAB -> Seleciona
-		DEL -> Remove
-		V -> Modo de Visualização
-
-		==============================
-	
-	*/
+	graphics->ResetCommands();
 
 	if (input->KeyPress(VK_ESCAPE))
 		window->Close();
@@ -138,20 +109,60 @@ void Multi::Update()
 	if (input->KeyPress('V'))
 		showPerspectiveOnly = !showPerspectiveOnly;
 
-	if (input->KeyPress(VK_DELETE)) {
-		scene.erase(scene.begin() + selectedGOIndex);
-
-		selectedGOIndex = (selectedGOIndex + 1) % scene.size();
-		if (selectedGOIndex == 0) selectedGOIndex++;
+	if (selectedGOIndex > 0) {
+		for (uint i = 1; i < scene.size(); i++)
+			scene[i].changeGOColor(i == selectedGOIndex ? SELECTED_OBJ_COLOR : UNSELECTED_OBJ_COLOR);
 	}
+
+	if (scene.size() == 2 && selectedGOIndex != 1) selectedGOIndex = 1;
 
 	if (input->KeyPress(VK_TAB)) {
-		selectedGOIndex = (selectedGOIndex + 1) % scene.size();
-		if (selectedGOIndex == 0) selectedGOIndex++;
+		if(scene.size() > 1) selectedGOIndex = (selectedGOIndex + 1) % scene.size();
+
+		if (selectedGOIndex == 0 (scene.size() > 1)) selectedGOIndex++;
 	}
 
-	XMMATRIX updatedWorldMatrix = operationHandler.executeGeometricOperation(input, XMLoadFloat4x4(&scene[selectedGOIndex].object.world));
-	XMStoreFloat4x4(&scene[selectedGOIndex].object.world, updatedWorldMatrix);
+	if (input->KeyPress(VK_DELETE)) {
+		if (scene.size() > 1 && selectedGOIndex != 0) {
+			scene.erase(scene.begin() + selectedGOIndex);
+			selectedGOIndex--;
+		}
+	}
+	
+	if (input->KeyPress('B')) {
+		Box box(2.0f, 2.0f, 2.0f);
+		scene.push_back(GeometricObject(box, UNSELECTED_OBJ_COLOR, viewports.size(), sizeof(ObjectConstants)));
+		selectedGOIndex = scene.size() - 1;
+	}
+	if (input->KeyPress('C')) {
+		Cylinder cylinder(1.0f, 0.5f, 3.0f, 20, 20);
+		scene.push_back(GeometricObject(cylinder, UNSELECTED_OBJ_COLOR, viewports.size(), sizeof(ObjectConstants)));
+		selectedGOIndex = scene.size() - 1;
+	}
+	if (input->KeyPress('G')) {
+		GeoSphere geosphere(1.0f, 3);
+		scene.push_back(GeometricObject(geosphere, UNSELECTED_OBJ_COLOR, viewports.size(), sizeof(ObjectConstants)));
+		selectedGOIndex = scene.size() - 1;
+	}
+	if (input->KeyPress('P')) {
+		Grid grid(2.0f, 2.0f, 20, 20);
+		scene.push_back(GeometricObject(grid, UNSELECTED_OBJ_COLOR, viewports.size(), sizeof(ObjectConstants)));
+		selectedGOIndex = scene.size() - 1;
+	}
+	if (input->KeyPress('Q')) {
+		Quad quad(2.0f, 2.0f);
+		scene.push_back(GeometricObject(quad, UNSELECTED_OBJ_COLOR, viewports.size(), sizeof(ObjectConstants)));
+		selectedGOIndex = scene.size() - 1;
+	}
+	if (input->KeyPress('S')) {
+		Sphere sphere(1.0f, 20, 20);
+		scene.push_back(GeometricObject(sphere, UNSELECTED_OBJ_COLOR, viewports.size(), sizeof(ObjectConstants)));
+		selectedGOIndex = scene.size() - 1;
+	}
+	if (selectedGOIndex > 0 && scene.size()) {
+		XMMATRIX updatedWorldMatrix = operationHandler.executeGeometricOperation(input, XMLoadFloat4x4(&scene[selectedGOIndex].object.world));
+		XMStoreFloat4x4(&scene[selectedGOIndex].object.world, updatedWorldMatrix);
+	}
 
 	float mousePosX = (float)input->MouseX();
 	float mousePosY = (float)input->MouseY();
@@ -183,17 +194,17 @@ void Multi::Update()
 	float z = radius * sinf(phi) * sinf(theta);
 	float y = radius * cosf(phi);
 
-	XMMATRIX tlView = generateObjectViewMatrix(x, y, z);
-	XMStoreFloat4x4(&TLView, tlView);
+	XMMATRIX perspectiveView = generateObjectViewMatrix(x, y, z);
+	XMStoreFloat4x4(&TLView, perspectiveView);
 
-	XMMATRIX trView = generateObjectViewMatrix(0.0f, 10.0f, 0.01f);
-	XMStoreFloat4x4(&TRView, trView);
+	XMMATRIX topView = generateObjectViewMatrix(0.0f, 10.0f, 0.01f);
+	XMStoreFloat4x4(&TRView, topView);
 
-	XMMATRIX blView = generateObjectViewMatrix(10.0f, 0.01f, 0.0f);
-	XMStoreFloat4x4(&BLView, blView);
+	XMMATRIX sideView = generateObjectViewMatrix(10.0f, 0.01f, 0.0f);
+	XMStoreFloat4x4(&BLView, sideView);
 
-	XMMATRIX brView = generateObjectViewMatrix(0.0f, 0.01f, 10.0f);
-	XMStoreFloat4x4(&BRView, brView);
+	XMMATRIX frontView = generateObjectViewMatrix(0.0f, 0.01f, 10.0f);
+	XMStoreFloat4x4(&BRView, frontView);
 
 	XMMATRIX perspectiveProj = XMLoadFloat4x4(&PerspectiveProj);
 	XMMATRIX orthographicProj = XMLoadFloat4x4(&OrthographicProj);
@@ -209,25 +220,26 @@ void Multi::Update()
 			switch (i)
 			{
 			case 0:
+			case 4:
+				WorldViewProj = objectWorld * perspectiveView * perspectiveProj;
+				break;
 			case 1:
-				WorldViewProj = objectWorld * tlView * perspectiveProj;
+				WorldViewProj = objectWorld * frontView * orthographicProj;
 				break;
 			case 2:
-				WorldViewProj = objectWorld * trView * orthographicProj;
+				WorldViewProj = objectWorld * topView * orthographicProj;
 				break;
 			case 3:
-				WorldViewProj = objectWorld * blView * orthographicProj;
+				WorldViewProj = objectWorld * sideView * orthographicProj;
 				break;
-			case 4:
-				WorldViewProj = objectWorld * brView * orthographicProj;
-				break;
+			
 			}
 
 			XMStoreFloat4x4(&constants.WorldViewProj, XMMatrixTranspose(WorldViewProj));
 			iterableObject.object.mesh->CopyConstants(&constants, i);
 		}
 	}
-
+	graphics->SubmitCommands();
 }
 
 void Multi::Draw()
@@ -407,8 +419,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 	try
 	{
 		Engine* engine = new Engine();
-		engine->window->Mode(WINDOWED);
-		engine->window->Size(1366, 768);
+		engine->window->Mode(FULLSCREEN);
+		engine->window->Size(1920, 1080);
 		engine->window->Color(25, 25, 25);
 		engine->window->Title("3DViewer");
 		engine->window->Icon(IDI_ICON);

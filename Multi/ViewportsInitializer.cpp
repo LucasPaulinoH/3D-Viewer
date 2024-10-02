@@ -16,12 +16,9 @@ vector<D3D12_VIEWPORT> initViewports(Window* window) {
     fullPerspectiveVP.MinDepth = 0.0f;
     fullPerspectiveVP.MaxDepth = 1.0f;
 
-    topLeftVP.TopLeftX = 0.0f;
-    topLeftVP.TopLeftY = 0.0f;
+    topLeftVP = fullPerspectiveVP;
     topLeftVP.Width = float(window->Width() / 2);
     topLeftVP.Height = float(window->Height() / 2);
-    topLeftVP.MinDepth = 0.0f;
-    topLeftVP.MaxDepth = 1.0f;
 
     topRightVP.TopLeftX = float(window->Width() / 2);
     topRightVP.TopLeftY = 0.0f;

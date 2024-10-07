@@ -21,8 +21,11 @@ class Multi : public App
 {
 private:
 	vector<D3D12_VIEWPORT> viewports;
+
 	ID3D12RootSignature* rootSignature = nullptr;
-	ID3D12PipelineState* pipelineState = nullptr;
+	ID3D12PipelineState* trianglePipelineState = nullptr;
+	ID3D12PipelineState* linePipelineState = nullptr;
+
 	vector<GeometricObject> scene;
 
 	XMFLOAT4X4 Identity = {};
@@ -30,6 +33,7 @@ private:
 	XMFLOAT4 FIXED_OBJ_COLOR = XMFLOAT4(DirectX::Colors::DimGray);
 	XMFLOAT4 UNSELECTED_OBJ_COLOR = XMFLOAT4(DirectX::Colors::Aquamarine);
 	XMFLOAT4 SELECTED_OBJ_COLOR = XMFLOAT4(DirectX::Colors::Blue);
+	XMFLOAT4 DIVISORY_LINE_COLOR = XMFLOAT4(DirectX::Colors::Red);
 
 	XMFLOAT4X4 TLView = {};
 	XMFLOAT4X4 TRView = {};
@@ -44,11 +48,29 @@ private:
 
 	OperationHandler operationHandler;
 
+	Vertex divisoryVertexes[6] =
+	{
+		{ XMFLOAT3(0.0f,  1.0f, 0.0f), DIVISORY_LINE_COLOR },
+		{ XMFLOAT3(0.0f, -1.0f, 0.0f), DIVISORY_LINE_COLOR },
+		{ XMFLOAT3(0.0f,  0.0f, 0.0f), DIVISORY_LINE_COLOR },
+		{ XMFLOAT3(1.0f,  0.0f, 0.0f), DIVISORY_LINE_COLOR },
+		{ XMFLOAT3(-1.0f, 0.0f, 0.0f), DIVISORY_LINE_COLOR },
+		{ XMFLOAT3(0.0f,  0.0f, 0.0f), DIVISORY_LINE_COLOR },
+	};
+
+	uint divisoryIndexes[6]{
+		0, 1, 2, 3, 4, 5
+	};
+
+	GeometricObject * linesGO;
+
 	float theta = 0;
 	float phi = 0;
 	float radius = 0;
 	float lastMousePosX = 0;
 	float lastMousePosY = 0;
+
+	ObjectConstants generalConstants;
 
 public:
 	void Init();
@@ -95,6 +117,18 @@ void Multi::Init()
 
 	scene.push_back(gridGO);
 
+	Geometry linesGeo;
+
+	for (uint i = 0; i < 6; i++) 
+		linesGeo.vertices.push_back(divisoryVertexes[i]);
+
+	for (uint i = 0; i < 6; i++)
+		linesGeo.indices.push_back(divisoryIndexes[i]);
+
+	linesGO = new GeometricObject(linesGeo, DIVISORY_LINE_COLOR, 1, sizeof(ObjectConstants));
+	XMStoreFloat4x4(&generalConstants.WorldViewProj, XMMatrixTranspose(XMLoadFloat4x4(&Identity)));
+	linesGO->object.mesh->CopyConstants(&generalConstants, 0);
+	
 	BuildRootSignature();
 	BuildPipelineState();
 
@@ -119,7 +153,7 @@ void Multi::Update()
 	if (scene.size() == 2 && selectedGOIndex != 1) selectedGOIndex = 1;
 
 	if (input->KeyPress(VK_TAB)) {
-		if(scene.size() > 1) selectedGOIndex = (selectedGOIndex + 1) % scene.size();
+		if (scene.size() > 1) selectedGOIndex = (selectedGOIndex + 1) % scene.size();
 
 		if (selectedGOIndex == 0 (scene.size() > 1)) selectedGOIndex++;
 	}
@@ -130,7 +164,7 @@ void Multi::Update()
 			selectedGOIndex--;
 		}
 	}
-	
+
 	if (input->KeyPress('B')) {
 		Box box(2.0f, 2.0f, 2.0f);
 		scene.push_back(GeometricObject(box, UNSELECTED_OBJ_COLOR, viewports.size(), sizeof(ObjectConstants)));
@@ -232,12 +266,12 @@ void Multi::Update()
 	XMMATRIX perspectiveProj = XMLoadFloat4x4(&PerspectiveProj);
 	XMMATRIX orthographicProj = XMLoadFloat4x4(&OrthographicProj);
 
+	XMMATRIX WorldViewProj;
+
+
 	for (auto& iterableObject : scene)
 	{
 		XMMATRIX objectWorld = XMLoadFloat4x4(&iterableObject.object.world);
-
-		XMMATRIX WorldViewProj;
-		ObjectConstants constants;
 
 		for (uint i = 0; i < viewports.size(); i++) {
 			switch (i)
@@ -255,23 +289,44 @@ void Multi::Update()
 			case 3:
 				WorldViewProj = objectWorld * sideView * orthographicProj;
 				break;
-			
+
 			}
 
-			XMStoreFloat4x4(&constants.WorldViewProj, XMMatrixTranspose(WorldViewProj));
-			iterableObject.object.mesh->CopyConstants(&constants, i);
+			XMStoreFloat4x4(&generalConstants.WorldViewProj, XMMatrixTranspose(WorldViewProj));
+			iterableObject.object.mesh->CopyConstants(&generalConstants, i);
 		}
 	}
+
 	graphics->SubmitCommands();
 }
 
 void Multi::Draw()
 {
-	graphics->Clear(pipelineState);
-	
-	if (!showPerspectiveOnly) {
+	graphics->Clear(nullptr);
 
+	graphics->CommandList()->SetPipelineState(linePipelineState);
+
+	if (!showPerspectiveOnly) {
+		//graphics->CommandList()->RSSetViewports(1, &viewports[0]);
+
+		graphics->CommandList()->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
+		
+		ID3D12DescriptorHeap* descriptorHeap = linesGO->object.mesh->ConstantBufferHeap();
+		graphics->CommandList()->SetDescriptorHeaps(1, &descriptorHeap);
+		graphics->CommandList()->SetGraphicsRootSignature(rootSignature);
+		graphics->CommandList()->IASetVertexBuffers(0, 1, linesGO->object.mesh->VertexBufferView());
+		graphics->CommandList()->IASetIndexBuffer(linesGO->object.mesh->IndexBufferView());
+
+		graphics->CommandList()->SetGraphicsRootDescriptorTable(0, linesGO->object.mesh->ConstantBufferHandle(0));
+
+		graphics->CommandList()->DrawIndexedInstanced(
+			6, 1,
+			0,
+			0,
+			0);
 	}
+
+	graphics->CommandList()->SetPipelineState(trianglePipelineState);
 
 	for (auto& iterableGO : scene)
 	{
@@ -305,7 +360,8 @@ void Multi::Draw()
 void Multi::Finalize()
 {
 	rootSignature->Release();
-	pipelineState->Release();
+	trianglePipelineState->Release();
+	linePipelineState->Release();
 
 	for (auto& iterableGO : scene)
 		delete iterableGO.object.mesh;
@@ -462,7 +518,11 @@ void Multi::BuildPipelineState()
 	pso.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	pso.SampleDesc.Count = graphics->Antialiasing();
 	pso.SampleDesc.Quality = graphics->Quality();
-	graphics->Device()->CreateGraphicsPipelineState(&pso, IID_PPV_ARGS(&pipelineState));
+	graphics->Device()->CreateGraphicsPipelineState(&pso, IID_PPV_ARGS(&trianglePipelineState));
+
+
+	pso.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+	graphics->Device()->CreateGraphicsPipelineState(&pso, IID_PPV_ARGS(&linePipelineState));
 
 	vertexShader->Release();
 	pixelShader->Release();
